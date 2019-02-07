@@ -1,6 +1,6 @@
 <template>
   <div class="editor" :style="{ writingMode: verticalMode ? 'vertical-rl' : 'horizontal-tb' }">
-    <!--<div contenteditable="true" class="editable" v-html="innerContent" @keydown="caret" @keyup="caret"></div>-->
+    <!--<div contenteditable="true" class="editable" v-html="innerContent" @keydown="moveCaret" @keyup="moveCaret"></div>-->
     <textarea class="dummyTextarea"
               @keydown="expandTextarea"
               @keyup.delete.stop="deleteChar"
@@ -78,7 +78,7 @@
       }
     },
     methods: {
-      caret () {
+      moveCaret () {
         // MEMO: このやり方だと、ctrl+f などで移動すると span 削除時に space が消えてしまう
         // const input = document.querySelector('.editable')
         // let anchor = document.createElement('span')
@@ -166,7 +166,7 @@
           const charRect = e.target.getBoundingClientRect()
           const charWidth = charRect.width
           const clickLeft = e.pageX - charRect.left
-          // クリックした位置によって caret 移動する先を前にするか後ろにするかを調整する
+          // クリックした位置によって moveCaret 移動する先を前にするか後ろにするかを調整する
           const offset = clickLeft > charWidth / 2 ? 1 : 0
           const caretIndex = Number(e.target.classList.item(1).replace('c-', '')) + offset
           const lineIndex = Number(e.target.parentElement.classList.item(1).replace('l-', ''))

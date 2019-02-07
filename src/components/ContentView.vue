@@ -128,7 +128,7 @@
         const parentRect = this.$refs['content-view'].getBoundingClientRect()
         this.target.x = rect.left - parentRect.left + (this.target.behind && !this.verticalMode ? rect.width : 0)
         this.target.y = rect.top - parentRect.top + (this.target.behind && this.verticalMode ? rect.height : 0)
-        // TODO: caret 位置の微調整、依存度が怪しいのでフォントサイズ変更などのデバッグが必要
+        // TODO: moveCaret 位置の微調整、依存度が怪しいのでフォントサイズ変更などのデバッグが必要
         if (this.verticalMode) {
           this.target.x += rect.width / 2
           this.target.y -= this.caretSize / 2

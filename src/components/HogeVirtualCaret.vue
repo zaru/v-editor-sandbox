@@ -1,6 +1,6 @@
 <template>
   <div class="hello">
-    <div contenteditable="true" class="editable" v-html="editContent" @input="sync" @keydown="caret" @keyup="caret"></div>
+    <div contenteditable="true" class="editable" v-html="editContent" @input="sync" @keydown="moveCaret" @keyup="moveCaret"></div>
     <div v-html="content"></div>
 
     <div class="virtual-caret" :style="caretStyle"></div>
@@ -39,7 +39,7 @@
       sync (e) {
         this.content = e.target.innerHTML
       },
-      caret () {
+      moveCaret () {
         const input = document.querySelector('.editable')
         const pos = position(input); // { left: 15, top: 30, height: 20, pos: 15 }
         const off = offset(input); // { left: 15, top: 30, height: 20 }
@@ -61,7 +61,7 @@
     position: relative;
   }
   .editable {
-    /*caret-color: transparent;*/
+    /*moveCaret-color: transparent;*/
   }
   .virtual-caret {
     background-color: #72f5be;

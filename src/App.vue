@@ -1,9 +1,10 @@
 <template>
   <div id="app">
+    <router-view></router-view>
     <!--<HelloWorld msg="Welcome to Your Vue.js + TypeScript App"/>-->
-    <hoge-virtual-caret></hoge-virtual-caret>
-    <!--<caret-position key="vertical" :vertical-mode="true"></caret-position>-->
-    <!--<caret-position key="horizontal" :vertical-mode="false"></caret-position>-->
+    <!--<hoge-virtual-moveCaret></hoge-virtual-moveCaret>-->
+    <!--<moveCaret-position key="vertical" :vertical-mode="true"></moveCaret-position>-->
+    <!--<moveCaret-position key="horizontal" :vertical-mode="false"></moveCaret-position>-->
     <!--<div class="section">-->
       <!--<flex-editor></flex-editor>-->
     <!--</div>-->
@@ -16,7 +17,7 @@
 <script lang="ts">
   import Vue from 'vue';
   // import HelloWorld from './components/HelloWorld.vue';
-  import HogeVirtualCaret from './components/HogeVirtualCaret.vue'
+  // import HogeVirtualCaret from './components/HogeVirtualCaret.vue'
   // import CaretPosition from './components/CaretPosition.vue'
   import FlexEditor from './components/FlexEditor.vue'
 
@@ -24,7 +25,7 @@
     name: 'app',
     components: {
       // HelloWorld,
-      HogeVirtualCaret
+      // HogeVirtualCaret
       // CaretPosition
       // FlexEditor
     }
