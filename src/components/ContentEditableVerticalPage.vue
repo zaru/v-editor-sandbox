@@ -5,12 +5,13 @@
          ref="editable"
          @input="sync"
          @keyup="editorKeyUp"
+         @paste.prevent="pasteText"
     ></div>
 
     <div class="preview"
          v-html="contentHtml"
          ref="preview"
-         @click="focusAndMoveCaret"
+         @mouseup="selected"
     ></div>
 
     <div class="caret" :style="caretStyle">
@@ -76,10 +77,12 @@
       }
     },
     methods: {
-      sync (e) {
+      sync () {
+        const nodes = this.$refs.editable.childNodes
         // MEMO: データベースに保存する必要のない属性などは削除する
         // 実際はもっとクレジングが必要な気がする
-        const cleanHTML = [...e.target.childNodes].map(e => {
+        // const cleanHTML = [...e.target.childNodes].map(e => {
+        const cleanHTML = [...nodes].map(e => {
           e.removeAttribute('data-key')
           return e.outerHTML
         }).join('')
@@ -89,12 +92,17 @@
         this.moveCaret(e)
       },
       focusAndMoveCaret (e) {
-        this.moveCaret(e)
-        const activeRange = this.getActiveRange()
-        this.mergeTextNode(e)
-        // MEMO: ここで editor の DOM を全部もとに戻す、こうすうことで re-render させずに node を戻せるっぽい
-        this.$refs.editable.innerHTML = this.$refs.preview.innerHTML
-        this.focusEditor(activeRange)
+        // テキスト以外のエディタ部分をクリックした場合は、フォーカスを末尾へ
+        if (e.target.className === 'preview') {
+
+        } else {
+          this.moveCaret(e)
+          const activeRange = this.getActiveRange()
+          this.mergeTextNode(e)
+          // MEMO: ここで editor の DOM を全部もとに戻す、こうすうことで re-render させずに node を戻せるっぽい
+          this.$refs.editable.innerHTML = this.$refs.preview.innerHTML
+          this.focusEditor(activeRange)
+        }
       },
       moveCaret (e) {
         const anchor = document.createElement('span')
@@ -140,6 +148,27 @@
         editorSel.removeAllRanges()
         editorSel.addRange(editorRange)
         this.$refs.editable.focus()
+      },
+      selected (e) {
+        console.log('Class: , Function: , Line 148 : ')
+        const sel = window.getSelection()
+        const range = sel.getRangeAt(0)
+        // 範囲選択ではない場合はフォーカスさせる
+        if (range.startOffset === range.endOffset) {
+          this.focusAndMoveCaret(e)
+        }
+      },
+      pasteText (e) {
+        const text = window.clipboardData ? window.clipboardData.getData('text') : e.clipboardData.getData('text/plain')
+        const sel = window.getSelection()
+        const range = sel.getRangeAt(0)
+        const node = document.createTextNode(text)
+        range.insertNode(node)
+        range.setStartAfter(node)
+        range.setEndAfter(node)
+        sel.removeAllRanges()
+        sel.addRange(range)
+        this.sync()
       }
     },
     mounted() {
@@ -163,13 +192,14 @@
     z-index: 2;
     top: 0px;
     /*caret-color: transparent;*/
-    opacity: 0;
+    opacity: 0.8;
   }
   .preview {
     width: 100%;
     position: absolute;
     z-index: 3;
     right: 28px;
+    opacity: 0.1;
   }
 
   .caret {
@@ -180,8 +210,8 @@
     width: inherit;
     height: inherit;
     display: block;
-    animation: blinkAnimation 500ms;
-    animation-duration: 2500ms;
+    animation: blinkAnimation 250ms;
+    animation-duration: 1500ms;
     animation-iteration-count: infinite;
   }
   .caret svg rect {

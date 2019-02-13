@@ -1,8 +1,8 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
 import App from './App.vue'
-import ContentEditablePage from './components/ContentEditablePage'
-import ContentEditableVerticalPage from './components/ContentEditableVerticalPage'
+import ContentEditablePage from './components/ContentEditablePage.vue'
+import ContentEditableVerticalPage from './components/ContentEditableVerticalPage.vue'
 
 Vue.use(VueRouter)
 
