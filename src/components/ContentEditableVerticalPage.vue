@@ -89,14 +89,17 @@
         this.content = cleanHTML
       },
       editorKeyUp (e) {
-        this.moveCaret(e)
+        this.moveCaret(e.target)
       },
       focusAndMoveCaret (e) {
         // テキスト以外のエディタ部分をクリックした場合は、フォーカスを末尾へ
         if (e.target.className === 'preview') {
-
+          const p = this.$refs.editable.childNodes[this.$refs.editable.childNodes.length - 1]
+          const t = p.childNodes[p.childNodes.length - 1]
+          this.activeFocus(t, t.length)
+          this.moveCaret(this.$refs.editable)
         } else {
-          this.moveCaret(e)
+          this.moveCaret(e.target)
           const activeRange = this.getActiveRange()
           this.mergeTextNode(e)
           // MEMO: ここで editor の DOM を全部もとに戻す、こうすうことで re-render させずに node を戻せるっぽい
@@ -104,7 +107,7 @@
           this.focusEditor(activeRange)
         }
       },
-      moveCaret (e) {
+      moveCaret (target) {
         const anchor = document.createElement('span')
         anchor.innerHTML = '&#200B'
         const sel = window.getSelection()
@@ -113,9 +116,9 @@
         const pos = anchor.getBoundingClientRect()
         anchor.parentElement.removeChild(anchor)
         const parentPos = this.$refs.editable.getBoundingClientRect()
-        const offsetTop = e.target.className === 'editable' ? 28 : 0
+        const offset = target.className === 'editable' ? 28 : 0
         this.caret.style.top = pos.top - parentPos.top + 'px'
-        this.caret.style.left = pos.left - offsetTop - parentPos.left + 3 + 'px'
+        this.caret.style.left = pos.left - offset - parentPos.left + 3 + 'px'
       },
       getActiveRange () {
         // クリックした位置の range を前もって抜き出しておく
@@ -134,23 +137,24 @@
         const mergedNode = [...e.target.childNodes].map(node => node.nodeValue).join('')
         e.target.innerHTML = mergedNode
       },
+      activeFocus (node, offset) {
+        const editorRange = document.createRange()
+        const editorSel = window.getSelection()
+        editorRange.setStart(node, offset)
+        editorRange.collapse(true)
+        editorSel.removeAllRanges()
+        editorSel.addRange(editorRange)
+        this.$refs.editable.focus()
+      },
       focusEditor (activeRange) {
         // 指定された node と offset から editor node を探索して focus させる
         const key = activeRange.key
         const targetNode = [...this.$refs.editable.childNodes].find(node => {
           return node.dataset.key === key
         })
-
-        const editorRange = document.createRange()
-        const editorSel = window.getSelection()
-        editorRange.setStart(targetNode.childNodes[0], activeRange.startOffset)
-        editorRange.collapse(true)
-        editorSel.removeAllRanges()
-        editorSel.addRange(editorRange)
-        this.$refs.editable.focus()
+        this.activeFocus(targetNode.childNodes[0], activeRange.startOffset)
       },
       selected (e) {
-        console.log('Class: , Function: , Line 148 : ')
         const sel = window.getSelection()
         const range = sel.getRangeAt(0)
         // 範囲選択ではない場合はフォーカスさせる
@@ -192,14 +196,14 @@
     z-index: 2;
     top: 0px;
     /*caret-color: transparent;*/
-    opacity: 0.8;
+    opacity: 0;
   }
   .preview {
     width: 100%;
     position: absolute;
     z-index: 3;
     right: 28px;
-    opacity: 0.1;
+    opacity: 1;
   }
 
   .caret {
