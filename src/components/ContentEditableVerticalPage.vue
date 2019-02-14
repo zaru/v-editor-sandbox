@@ -6,6 +6,7 @@
          @input="sync"
          @keyup="editorKeyUp"
          @paste.prevent="pasteText"
+         @blur="focusOut"
     ></div>
 
     <div class="preview"
@@ -32,11 +33,13 @@
       return {
         innerContent: '',
         content: "<p>今日は暖かいという噂だったけど、そんなことはなかった。</p>" +
+          "<h3>小見出しです</h3>" +
           "<p>The Logical Framework Approach (LFA) is a methodology mainly used for designing, monitoring, and evaluating international development projects.</p>" +
-          "<p>カリスト (Jupiter IV Callisto) は、木星の第4衛星である。ガニメデに次いで2番目に大きい木星の衛星であり、太陽系の衛星の中ではガニメデと土星最大の衛星タイタンに次ぐ3番目の大きさを持つ。</p>",
+          "<p>カリスト (Jupiter IV Callisto) は、<strong>木星の第4衛星である。</strong>ガニメデに次いで2番目に大きい木星の衛星であり、太陽系の衛星の中ではガニメデと土星最大の衛星タイタンに次ぐ3番目の大きさを持つ。</p>",
         caret: {
           style: {
-            width: '18px',
+            display: 'none',
+            width: '22px',
             top: '0px',
             left: '0px'
           }
@@ -51,6 +54,11 @@
           div.innerHTML = this.innerContent
           div.childNodes.forEach((node, index) => {
             node.dataset.key = index
+            node.childNodes.forEach((node, c_index) => {
+              if (node.dataset) {
+                node.dataset.key = `${index}-${c_index}`
+              }
+            })
           })
           return div.innerHTML
         },
@@ -65,11 +73,17 @@
         div.innerHTML = this.content
         div.childNodes.forEach((node, index) => {
           node.dataset.key = index
+          node.childNodes.forEach((node, c_index) => {
+            if (node.dataset) {
+              node.dataset.key = `${index}-${c_index}`
+            }
+          })
         })
         return div.innerHTML
       },
       caretStyle () {
         return {
+          display: this.caret.style.display,
           width: this.caret.style.width,
           top: this.caret.style.top,
           left: this.caret.style.left
@@ -108,6 +122,7 @@
         }
       },
       moveCaret (target) {
+        this.caret.style.display = 'block'
         const anchor = document.createElement('span')
         anchor.innerHTML = '&#200B'
         const sel = window.getSelection()
@@ -118,7 +133,7 @@
         const parentPos = this.$refs.editable.getBoundingClientRect()
         const offset = target.className === 'editable' ? 28 : 0
         this.caret.style.top = pos.top - parentPos.top + 'px'
-        this.caret.style.left = pos.left - offset - parentPos.left + 3 + 'px'
+        this.caret.style.left = pos.left - offset - parentPos.left + 1 + 'px'
       },
       getActiveRange () {
         // クリックした位置の range を前もって抜き出しておく
@@ -152,7 +167,19 @@
         const targetNode = [...this.$refs.editable.childNodes].find(node => {
           return node.dataset.key === key
         })
+        // TODO: nest された node の中身を探索する効率的な方法を考える
+        // flat() は良さそうだったが、そもそも childNodes が配列の塊じゃないから事前に列挙する必要があり、それなら最初からそうしてる
+        if (!targetNode) {
+          const hoge = [...this.$refs.editable.childNodes].flat(2).find(node => {
+            return node.dataset && node.dataset.key === key
+          })
+          console.log('Class: , Function: , Line 176 hoge: ', hoge)
+        }
+        console.log('Class: , Function: , Line 160 targetNode: ', activeRange, targetNode)
         this.activeFocus(targetNode.childNodes[0], activeRange.startOffset)
+      },
+      focusOut () {
+        this.caret.style.display = 'none'
       },
       selected (e) {
         const sel = window.getSelection()
@@ -214,12 +241,12 @@
     width: inherit;
     height: inherit;
     display: block;
-    animation: blinkAnimation 250ms;
+    animation: blinkAnimation;
     animation-duration: 1500ms;
     animation-iteration-count: infinite;
   }
   .caret svg rect {
-    fill: #555;
+    fill: #333;
   }
   @keyframes blinkAnimation {
     0% { opacity: 0 }
