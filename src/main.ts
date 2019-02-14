@@ -3,6 +3,7 @@ import VueRouter from 'vue-router'
 import App from './App.vue'
 import ContentEditablePage from './components/ContentEditablePage.vue'
 import ContentEditableVerticalPage from './components/ContentEditableVerticalPage.vue'
+import ContentEditableVerticalPageMobile from './components/ContentEditableVerticalPageMobile.vue'
 
 Vue.use(VueRouter)
 
@@ -11,6 +12,7 @@ Vue.config.productionTip = false
 const routes = [
   { path: '/contenteditable', component: ContentEditablePage },
   { path: '/contenteditable/vertical', component: ContentEditableVerticalPage },
+  { path: '/contenteditable/vertical/m', component: ContentEditableVerticalPageMobile },
 ]
 
 const router = new VueRouter({
