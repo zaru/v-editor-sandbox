@@ -53,7 +53,9 @@
           const div = document.createElement('div')
           div.innerHTML = this.innerContent
           div.childNodes.forEach((node, index) => {
-            node.dataset.key = index
+            if (node.dataset) {
+              node.dataset.key = index
+            }
             node.childNodes.forEach((node, c_index) => {
               if (node.dataset) {
                 node.dataset.key = `${index}-${c_index}`
@@ -72,7 +74,9 @@
         const div = document.createElement('div')
         div.innerHTML = this.content
         div.childNodes.forEach((node, index) => {
-          node.dataset.key = index
+          if (node.dataset) {
+            node.dataset.key = index
+          }
           node.childNodes.forEach((node, c_index) => {
             if (node.dataset) {
               node.dataset.key = `${index}-${c_index}`
@@ -114,7 +118,7 @@
           this.moveCaret(this.$refs.editable)
         } else {
           this.moveCaret(e.target)
-          const activeRange = this.getActiveRange()
+          const activeRange = this.getActiveRange(e.target)
           this.mergeTextNode(e)
           // MEMO: ここで editor の DOM を全部もとに戻す、こうすうことで re-render させずに node を戻せるっぽい
           this.$refs.editable.innerHTML = this.$refs.preview.innerHTML
@@ -135,13 +139,13 @@
         this.caret.style.top = pos.top - parentPos.top + 'px'
         this.caret.style.left = pos.left - offset - parentPos.left + 1 + 'px'
       },
-      getActiveRange () {
+      getActiveRange (target) {
         // クリックした位置の range を前もって抜き出しておく
         // mergeTextNode で内包 node を書き換えてしまうと range 情報が失われてしまうので
         const previewSel = window.getSelection()
         const previewRange = previewSel.getRangeAt(0)
         return {
-          key: previewRange.commonAncestorContainer.dataset.key,
+          key: target.dataset.key,
           startOffset: previewRange.startOffset
         }
       },
@@ -165,7 +169,7 @@
         // 指定された node と offset から editor node を探索して focus させる
         const key = activeRange.key
         const targetNode = [...this.$refs.editable.childNodes].find(node => {
-          return node.dataset.key === key
+          return node.dataset && node.dataset.key === key
         })
         // TODO: nest された node の中身を探索する効率的な方法を考える
         // flat() は良さそうだったが、そもそも childNodes が配列の塊じゃないから事前に列挙する必要があり、それなら最初からそうしてる
@@ -173,9 +177,7 @@
           const hoge = [...this.$refs.editable.childNodes].flat(2).find(node => {
             return node.dataset && node.dataset.key === key
           })
-          console.log('Class: , Function: , Line 176 hoge: ', hoge)
         }
-        console.log('Class: , Function: , Line 160 targetNode: ', activeRange, targetNode)
         this.activeFocus(targetNode.childNodes[0], activeRange.startOffset)
       },
       focusOut () {
