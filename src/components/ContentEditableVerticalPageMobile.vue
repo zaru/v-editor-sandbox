@@ -27,7 +27,7 @@
         content: "<p>今日は暖かいという噂だったけど、そんなことはなかった。</p>" +
           "<h3>小見出しです</h3>" +
           "<p>The Logical Framework Approach (LFA) is a methodology mainly used for designing, monitoring, and evaluating international development projects.</p>" +
-          "<p>カリスト (Jupiter IV Callisto) は、<strong>木星の第4衛星である。</strong>ガニメデに次いで2番目に大きい木星の衛星であり、太陽系の衛星の中ではガニメデと土星最大の衛星タイタンに次ぐ3番目の大きさを持つ。</p>",
+          "<p>カリスト (Jupiter IV Callisto) は、木星の第4衛星である。ガニメデに次いで2番目に大きい木星の衛星であり、太陽系の衛星の中ではガニメデと土星最大の衛星タイタンに次ぐ3番目の大きさを持つ。</p>",
         caret: {
           style: {
             display: 'none',
@@ -178,11 +178,11 @@
         })
         // TODO: nest された node の中身を探索する効率的な方法を考える
         // flat() は良さそうだったが、そもそも childNodes が配列の塊じゃないから事前に列挙する必要があり、それなら最初からそうしてる
-        if (!targetNode) {
-          const hoge = [...this.$refs.editable.childNodes].flat(2).find(node => {
-            return node.dataset && node.dataset.key === key
-          })
-        }
+        // if (!targetNode) {
+        //   const hoge = [...this.$refs.editable.childNodes].flat(2).find(node => {
+        //     return node.dataset && node.dataset.key === key
+        //   })
+        // }
         this.activeFocus(targetNode.childNodes[0], activeRange.startOffset)
       },
       focusOut () {
