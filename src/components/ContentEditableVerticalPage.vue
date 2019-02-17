@@ -38,8 +38,10 @@
         innerContent: '',
         content: "<p>今日は暖かいという噂だったけど、そんなことはなかった。</p>" +
           "<h3>小見出しです</h3>" +
+          "<p><br></p>" +
+          "<p><br></p>" +
           "<p>The Logical Framework Approach (LFA) is a methodology mainly used for designing, monitoring, and evaluating international development projects.</p>" +
-          "<p>カリスト (Jupiter IV Callisto) は、木星の第4衛星である。ガニメデに次いで2番目に大きい木星の衛星であり、太陽系の衛星の中ではガニメデと土星最大の衛星タイタンに次ぐ3番目の大きさを持つ。</p>",
+          "<p>カリスト (Jupiter IV Callisto) は、<strong>木星の第4衛星である。</strong>ガニメデに次いで2番目に大きい木星の衛星であり、太陽系の衛星の中ではガニメデと土星最大の衛星タイタンに次ぐ3番目の大きさを持つ。</p>",
         caret: {
           style: {
             display: 'none',
@@ -112,23 +114,10 @@
         }).join('')
         this.content = cleanHTML
       },
-      syncPreviewToEditor () {
-        // TODO: 必要なさそう、キャレット移動時に innerHTML をまるごとコピーしているから
-        const clone = this.$refs.preview.cloneNode(true)
-        const nodes = clone.childNodes
-        // MEMO: データベースに保存する必要のない属性などは削除する
-        // 実際はもっとクレジングが必要な気がする
-        // const cleanHTML = [...e.target.childNodes].map(e => {
-        const cleanHTML = [...nodes].map(e => {
-          e.removeAttribute('data-key')
-          return e.outerHTML
-        }).join('')
-        this.innerContent = cleanHTML
-      },
       editorKeyUp (e) {
         this.moveCaret(e.target)
       },
-      focusAndMoveCaret (e) {
+      focusAndMoveCaret (e, range) {
         // テキスト以外のエディタ部分をクリックした場合は、フォーカスを末尾へ
         if (e.target.className === 'preview') {
           const p = this.$refs.editable.childNodes[this.$refs.editable.childNodes.length - 1]
@@ -139,9 +128,11 @@
           this.moveCaret(e.target)
           // クリックした位置の range を前もって抜き出しておく
           // mergeTextNode で内包 node を書き換えてしまうと range 情報が失われてしまうので
-          const previewSel = window.getSelection()
-          const previewRange = previewSel.getRangeAt(0)
-          const activeRange = this.getActiveRange(previewRange, e.target)
+          if (!range) {
+            const previewSel = window.getSelection()
+            range = previewSel.getRangeAt(0)
+          }
+          const activeRange = this.getActiveRange(range, e.target)
           this.mergeTextNode(e.target)
           // MEMO: ここで editor の DOM を全部もとに戻す、こうすうことで re-render させずに node を戻せるっぽい
           this.$refs.editable.innerHTML = this.$refs.preview.innerHTML
@@ -159,6 +150,8 @@
         } else {
           this.caret.style.display = 'block'
           const anchor = document.createElement('span')
+          // MEMO: 先頭に空の span いれると座標がずれるため zero-width-space 入れる
+          anchor.innerText = '&#8203;'
           range.insertNode(anchor)
           const pos = anchor.getBoundingClientRect()
           anchor.parentElement.removeChild(anchor)
@@ -169,17 +162,35 @@
         }
       },
       getActiveRange (range, target) {
+        // MEMO: 自身の textnode が親から見て何番目のインデックスなのかを知る
+        let targetNode = range.startContainer
+        let i = 0
+        if (range.startContainer.nodeType === 3) {
+          while ((targetNode = targetNode.previousSibling) !== null) {
+            i++
+          }
+        }
         return {
           key: target.dataset.key,
+          index: i,
           startOffset: range.startOffset
         }
       },
       mergeTextNode (e) {
         // span を差し込むことで textnode が分割されるのをもとに戻す
-        // TODO: おそらく太字とかを考えると単純な textnode だけではないので対応する
-        // MEMO: ↓ これが preview の方だと textnode だけなので OK なんだけど
-        const mergedNode = [...e.childNodes].map(node => node.nodeValue).join('')
-        e.innerHTML = mergedNode
+        let joinNode = ''
+        ;[...e.childNodes].forEach(node => {
+            if (node.nodeType !== 3) {
+              node.innerText = [...node.childNodes].map(node => node.nodeValue).join('')
+              joinNode += node.outerHTML
+            } else {
+              joinNode += node.nodeValue
+            }
+        })
+        // const mergedNode = [...e.childNodes].map(node => node.nodeValue).join('')
+        // MEMO: 空白の改行の場合、<br> だけなので nodeValue でテキストにすると削除されてしまうので入れ直す
+        // e.innerHTML = mergedNode ? mergedNode : '<br>'
+        e.innerHTML = joinNode
       },
       activeFocus (node, offset) {
         const editorRange = document.createRange()
@@ -193,18 +204,16 @@
       focusEditor (activeRange) {
         // 指定された node と offset から editor node を探索して focus させる
         const key = activeRange.key
-        const targetNode = [...this.$refs.editable.childNodes].find(node => {
+        let targetNode = [...this.$refs.editable.childNodes].find(node => {
           return node.dataset && node.dataset.key === key
         })
-        // TODO: nest された node の中身を探索する効率的な方法を考える
-        // 必要なシーン <strong> などのネストされたタグがあった場合の対応に
-        // flat() は良さそうだったが、そもそも childNodes が配列の塊じゃないから事前に列挙する必要があり、それなら最初からそうしてる
-        // if (!targetNode) {
-        //   const hoge = [...this.$refs.editable.childNodes].flat(2).find(node => {
-        //     return node.dataset && node.dataset.key === key
-        //   })
-        // }
-        this.activeFocus(targetNode.childNodes[0], activeRange.startOffset)
+        // MEMO: ネストされた node がある場合の対応
+        if (!targetNode) {
+          targetNode = [...this.$refs.editable.childNodes].map(node => [...node.childNodes]).flat().find(node => {
+            return node.dataset && node.dataset.key === key
+          })
+        }
+        this.activeFocus(targetNode.childNodes[activeRange.index], activeRange.startOffset)
       },
       focusOut () {
         this.caret.style.display = 'none'
@@ -214,7 +223,7 @@
         const range = sel.getRangeAt(0)
         // 範囲選択ではない場合はフォーカスさせる
         if (range.startOffset === range.endOffset) {
-          this.focusAndMoveCaret(e)
+          this.focusAndMoveCaret(e, range)
         } else {
           this.selecting = true
         }
@@ -319,4 +328,5 @@
     0% { opacity: 0 }
     100% { opacity: 1 }
   }
+
 </style>
