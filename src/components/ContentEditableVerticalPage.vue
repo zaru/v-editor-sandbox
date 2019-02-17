@@ -6,7 +6,8 @@
          @compositionstart="compositionstart"
          @compositionend="compositionend"
          @input="sync"
-         @keyup="editorKeyUp"
+         @keyup.exact="editorKeyUp"
+         @keydown.meta.65="selectAll"
          @paste.prevent="pasteText"
          @blur="focusOut"
     ></div>
@@ -266,12 +267,32 @@
             activeRange.startOffset = target.innerText.length
           }
           this.mergeTextNode(target)
+
+          // MEMO: 全て消した場合、なにもないと入力できないので zero-width-space を入れる
+          if (!this.$refs.preview.innerText) {
+            this.$refs.preview.innerHTML = '<p>&#8203;</p>'
+          }
+
           // MEMO: ここで editor の DOM を全部もとに戻す、こうすうことで re-render させずに node を戻せるっぽい
           this.$refs.editable.innerHTML = this.$refs.preview.innerHTML
           this.focusEditor(activeRange)
-
-          return false
+          this.selecting = false
         }
+      },
+      selectAll (e) {
+        // TODO: Windows の場合は ctrl なので、それにも対応させる
+        e.stopPropagation()
+        e.preventDefault()
+        this.selecting = true
+        document.activeElement.blur()
+        const range = document.createRange()
+        const sel = window.getSelection()
+        // range.selectNodeContents(this.$refs.preview)
+        range.setStart(this.$refs.preview.childNodes[0], 0)
+        const endNode = this.$refs.preview.childNodes[this.$refs.preview.childNodes.length - 1]
+        range.setEnd(endNode, endNode.childNodes.length)
+        sel.removeAllRanges()
+        sel.addRange(range)
       }
     },
     mounted() {
