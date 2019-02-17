@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<body>
+<div id="editor" contenteditable="true">abc def</div>
+<script>
+  const editor = document.getElementById('editor')
+  editor.addEventListener('keyup', () => {
+    const anchor = document.createElement('span')
+    const sel = window.getSelection()
+    const range = sel.getRangeAt(0)
+    range.insertNode(anchor)
+    const caret_position = anchor.getBoundingClientRect()
+    console.log('Class: , Function: , Line 13 caret_position: ', caret_position)
+    anchor.parentElement.removeChild(anchor)
+  })
+</script>
+</body>
+</html>

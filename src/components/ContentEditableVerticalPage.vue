@@ -3,6 +3,8 @@
     <div contenteditable="true" class="editable"
          v-html="editContent"
          ref="editable"
+         @compositionstart="compositionstart"
+         @compositionend="compositionend"
          @input="sync"
          @keyup="editorKeyUp"
          @paste.prevent="pasteText"
@@ -23,7 +25,9 @@
 </template>
 
 <script>
+  import browser from 'browser-detect'
   import Vue from 'vue'
+  const ua = browser()
 
   export default Vue.extend({
     name: 'ContentEditableVerticalPage',
@@ -43,7 +47,9 @@
             top: '0px',
             left: '0px'
           }
-        }
+        },
+        compositing: false,
+        selecting: false
       }
     },
     computed: {
@@ -106,6 +112,19 @@
         }).join('')
         this.content = cleanHTML
       },
+      syncPreviewToEditor () {
+        // TODO: 必要なさそう、キャレット移動時に innerHTML をまるごとコピーしているから
+        const clone = this.$refs.preview.cloneNode(true)
+        const nodes = clone.childNodes
+        // MEMO: データベースに保存する必要のない属性などは削除する
+        // 実際はもっとクレジングが必要な気がする
+        // const cleanHTML = [...e.target.childNodes].map(e => {
+        const cleanHTML = [...nodes].map(e => {
+          e.removeAttribute('data-key')
+          return e.outerHTML
+        }).join('')
+        this.innerContent = cleanHTML
+      },
       editorKeyUp (e) {
         this.moveCaret(e.target)
       },
@@ -118,43 +137,49 @@
           this.moveCaret(this.$refs.editable)
         } else {
           this.moveCaret(e.target)
-          const activeRange = this.getActiveRange(e.target)
-          this.mergeTextNode(e)
+          // クリックした位置の range を前もって抜き出しておく
+          // mergeTextNode で内包 node を書き換えてしまうと range 情報が失われてしまうので
+          const previewSel = window.getSelection()
+          const previewRange = previewSel.getRangeAt(0)
+          const activeRange = this.getActiveRange(previewRange, e.target)
+          this.mergeTextNode(e.target)
           // MEMO: ここで editor の DOM を全部もとに戻す、こうすうことで re-render させずに node を戻せるっぽい
           this.$refs.editable.innerHTML = this.$refs.preview.innerHTML
           this.focusEditor(activeRange)
         }
       },
-      moveCaret (target) {
-        this.caret.style.display = 'block'
-        const anchor = document.createElement('span')
-        anchor.innerHTML = '&#200B'
-        const sel = window.getSelection()
-        const range = sel.getRangeAt(0)
-        range.insertNode(anchor)
-        const pos = anchor.getBoundingClientRect()
-        anchor.parentElement.removeChild(anchor)
-        const parentPos = this.$refs.editable.getBoundingClientRect()
-        const offset = target.className === 'editable' ? 28 : 0
-        this.caret.style.top = pos.top - parentPos.top + 'px'
-        this.caret.style.left = pos.left - offset - parentPos.left + 1 + 'px'
+      moveCaret (target, range) {
+        if (!range) {
+          const sel = window.getSelection()
+          range = sel.getRangeAt(0)
+        }
+        // MEMO: safari で日本語変換中に node をいじると二重でテキストが入ってしまうため変換中は caret 移動させない
+        if (ua.name === 'safari' && this.compositing) {
+          this.caret.style.display = 'none'
+        } else {
+          this.caret.style.display = 'block'
+          const anchor = document.createElement('span')
+          range.insertNode(anchor)
+          const pos = anchor.getBoundingClientRect()
+          anchor.parentElement.removeChild(anchor)
+          const parentPos = this.$refs.editable.getBoundingClientRect()
+          const offset = target.className === 'editable' ? 28 : 0
+          this.caret.style.top = pos.top - parentPos.top + 'px'
+          this.caret.style.left = pos.left - offset - parentPos.left + 1 + 'px'
+        }
       },
-      getActiveRange (target) {
-        // クリックした位置の range を前もって抜き出しておく
-        // mergeTextNode で内包 node を書き換えてしまうと range 情報が失われてしまうので
-        const previewSel = window.getSelection()
-        const previewRange = previewSel.getRangeAt(0)
+      getActiveRange (range, target) {
         return {
           key: target.dataset.key,
-          startOffset: previewRange.startOffset
+          startOffset: range.startOffset
         }
       },
       mergeTextNode (e) {
         // span を差し込むことで textnode が分割されるのをもとに戻す
         // TODO: おそらく太字とかを考えると単純な textnode だけではないので対応する
         // MEMO: ↓ これが preview の方だと textnode だけなので OK なんだけど
-        const mergedNode = [...e.target.childNodes].map(node => node.nodeValue).join('')
-        e.target.innerHTML = mergedNode
+        const mergedNode = [...e.childNodes].map(node => node.nodeValue).join('')
+        e.innerHTML = mergedNode
       },
       activeFocus (node, offset) {
         const editorRange = document.createRange()
@@ -172,6 +197,7 @@
           return node.dataset && node.dataset.key === key
         })
         // TODO: nest された node の中身を探索する効率的な方法を考える
+        // 必要なシーン <strong> などのネストされたタグがあった場合の対応に
         // flat() は良さそうだったが、そもそも childNodes が配列の塊じゃないから事前に列挙する必要があり、それなら最初からそうしてる
         // if (!targetNode) {
         //   const hoge = [...this.$refs.editable.childNodes].flat(2).find(node => {
@@ -189,6 +215,8 @@
         // 範囲選択ではない場合はフォーカスさせる
         if (range.startOffset === range.endOffset) {
           this.focusAndMoveCaret(e)
+        } else {
+          this.selecting = true
         }
       },
       pasteText (e) {
@@ -202,11 +230,48 @@
         sel.removeAllRanges()
         sel.addRange(range)
         this.sync()
+      },
+      compositionstart () {
+        this.compositing = true
+      },
+      compositionend () {
+        this.compositing = false
+      },
+      deleteSelectNode (e) {
+        if (this.selecting && (e.key === 'Backspace' || e.key === 'Delete')) {
+          e.stopPropagation()
+          e.preventDefault()
+
+          // MEMO: 選択削除後、キャレットの位置を復元
+          const sel = window.getSelection()
+          const range = sel.getRangeAt(0)
+
+          const acrossNode = range.startContainer !== range.endContainer
+          const target = range.startContainer.parentNode
+          sel.deleteFromDocument()
+          this.moveCaret(this.$refs.preview, range)
+
+          const activeRange = this.getActiveRange(range, target)
+          // MEMO: node またぎのときには先頭 node の末尾にキャレットを移動させる
+          if (acrossNode) {
+            activeRange.startOffset = target.innerText.length
+          }
+          this.mergeTextNode(target)
+          // MEMO: ここで editor の DOM を全部もとに戻す、こうすうことで re-render させずに node を戻せるっぽい
+          this.$refs.editable.innerHTML = this.$refs.preview.innerHTML
+          this.focusEditor(activeRange)
+
+          return false
+        }
       }
     },
     mounted() {
       this.innerContent = this.content
       document.execCommand('DefaultParagraphSeparator', false, 'p')
+      window.addEventListener('keydown', this.deleteSelectNode, true)
+    },
+    destroyed() {
+      window.removeEventListener('keydown', this.deleteSelectNode, true)
     }
   })
 </script>
