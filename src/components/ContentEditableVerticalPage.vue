@@ -9,6 +9,7 @@
          @keyup.exact="editorKeyUp"
          @keydown.meta.65="selectAll"
          @paste.prevent="pasteText"
+         @focus="focus"
          @blur="focusOut"
     ></div>
 
@@ -16,6 +17,7 @@
          v-html="contentHtml"
          ref="preview"
          @mouseup="selected"
+         :style="previewStyle"
     ></div>
 
     <div class="caret" :style="caretStyle">
@@ -49,6 +51,11 @@
             width: '22px',
             top: '0px',
             left: '0px'
+          }
+        },
+        preview: {
+          style: {
+            boxShadow: 'none'
           }
         },
         compositing: false,
@@ -100,6 +107,11 @@
           width: this.caret.style.width,
           top: this.caret.style.top,
           left: this.caret.style.left
+        }
+      },
+      previewStyle () {
+        return {
+          boxShadow: this.preview.style.boxShadow
         }
       }
     },
@@ -181,12 +193,12 @@
         // span を差し込むことで textnode が分割されるのをもとに戻す
         let joinNode = ''
         ;[...e.childNodes].forEach(node => {
-            if (node.nodeType !== 3) {
-              node.innerText = [...node.childNodes].map(node => node.nodeValue).join('')
-              joinNode += node.outerHTML
-            } else {
-              joinNode += node.nodeValue
-            }
+          if (node.nodeType !== 3) {
+            node.innerText = [...node.childNodes].map(node => node.nodeValue).join('')
+            joinNode += node.outerHTML
+          } else {
+            joinNode += node.nodeValue
+          }
         })
         // const mergedNode = [...e.childNodes].map(node => node.nodeValue).join('')
         // MEMO: 空白の改行の場合、<br> だけなので nodeValue でテキストにすると削除されてしまうので入れ直す
@@ -216,7 +228,13 @@
         }
         this.activeFocus(targetNode.childNodes[activeRange.index], activeRange.startOffset)
       },
+      focus () {
+        this.preview.style.boxShadow = '0 0 5px 0px rgba(0, 123, 255, .4)'
+      },
       focusOut () {
+        if (!this.selecting) {
+          this.preview.style.boxShadow = 'none'
+        }
         this.caret.style.display = 'none'
       },
       selected (e) {
@@ -315,19 +333,24 @@
     writing-mode: vertical-rl;
   }
   .editable {
+    box-sizing: border-box;
     width: 100%;
     position: absolute;
     z-index: 2;
     top: 0px;
+    padding: 1rem;
     /*caret-color: transparent;*/
     opacity: 0;
   }
   .preview {
+    border-radius: 3px;
+    box-sizing: border-box;
     width: 100%;
     position: absolute;
     z-index: 3;
     right: 28px;
     opacity: 1;
+    padding: 1rem;
   }
 
   .caret {
