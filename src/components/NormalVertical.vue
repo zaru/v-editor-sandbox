@@ -30,6 +30,6 @@
   .editor {
     width: 100%;
     height: 400px;
-    riting-mode: vertical-rl;
+    writing-mode: vertical-rl;
   }
 </style>
