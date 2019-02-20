@@ -7,6 +7,7 @@
          @compositionend="compositionend"
          @input="sync"
          @keyup.exact="editorKeyUp"
+         @keyup.enter="hoge"
          @keydown.meta.65="selectAll"
          @paste.prevent="pasteText"
          @focus="focus"
@@ -311,6 +312,11 @@
         range.setEnd(endNode, endNode.childNodes.length)
         sel.removeAllRanges()
         sel.addRange(range)
+      },
+      hoge (e) {
+        if (!this.isComposing) {
+          console.log('Class: , Function: , Line 318 e: ', e)
+        }
       }
     },
     mounted() {
@@ -326,6 +332,7 @@
 
 <style scoped>
   .content-editable-page {
+    overflow: scroll;
     width: 100%;
     height: 500px;
     position: relative;
@@ -351,6 +358,9 @@
     right: 28px;
     opacity: 1;
     padding: 1rem;
+  }
+  .editable, .preview {
+    padding-left: 3rem;
   }
 
   .caret {

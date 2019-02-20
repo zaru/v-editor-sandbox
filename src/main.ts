@@ -5,6 +5,9 @@ import ContentEditablePage from './components/ContentEditablePage.vue'
 import ContentEditableVerticalPage from './components/ContentEditableVerticalPage.vue'
 import ContentEditableVerticalPageMobile from './components/ContentEditableVerticalPageMobile.vue'
 import Sync from './components/Sync.vue'
+import CaretMove from './components/CaretMove.vue'
+import AbsoluteCaret from './components/AbsoluteCaret.vue'
+import NormalVertical from './components/NormalVertical.vue'
 
 Vue.use(VueRouter)
 
@@ -15,6 +18,9 @@ const routes = [
   { path: '/contenteditable/vertical', component: ContentEditableVerticalPage },
   { path: '/contenteditable/vertical/m', component: ContentEditableVerticalPageMobile },
   { path: '/contenteditable/sync', component: Sync },
+  { path: '/contenteditable/caret', component: CaretMove },
+  { path: '/contenteditable/ab_caret', component: AbsoluteCaret },
+  { path: '/contenteditable/normal', component: NormalVertical },
 ]
 
 const router = new VueRouter({
