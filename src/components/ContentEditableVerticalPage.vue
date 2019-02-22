@@ -1,5 +1,8 @@
 <template>
-  <div class="content-editable-page">
+  <div class="content-editable-page"
+       ref="container"
+       :style="containerStyle"
+  >
     <div contenteditable="true" class="editable"
          v-html="editContent"
          ref="editable"
@@ -18,7 +21,6 @@
          v-html="contentHtml"
          ref="preview"
          @mouseup="selected"
-         :style="previewStyle"
     ></div>
 
     <div class="caret" :style="caretStyle">
@@ -54,7 +56,7 @@
             left: '0px'
           }
         },
-        preview: {
+        container: {
           style: {
             boxShadow: 'none'
           }
@@ -110,9 +112,9 @@
           left: this.caret.style.left
         }
       },
-      previewStyle () {
+      containerStyle () {
         return {
-          boxShadow: this.preview.style.boxShadow
+          boxShadow: this.container.style.boxShadow
         }
       }
     },
@@ -230,11 +232,11 @@
         this.activeFocus(targetNode.childNodes[activeRange.index], activeRange.startOffset)
       },
       focus () {
-        this.preview.style.boxShadow = '0 0 5px 0px rgba(0, 123, 255, .4)'
+        this.container.style.boxShadow = '0 0 5px 0px rgba(0, 123, 255, .4)'
       },
       focusOut () {
         if (!this.selecting) {
-          this.preview.style.boxShadow = 'none'
+          this.container.style.boxShadow = 'none'
         }
         this.caret.style.display = 'none'
       },
@@ -314,6 +316,7 @@
         sel.addRange(range)
       },
       hoge (e) {
+        // TODO: これなにがしたかったんだっけ…？
         if (!this.isComposing) {
           console.log('Class: , Function: , Line 318 e: ', e)
         }
@@ -323,6 +326,18 @@
       this.innerContent = this.content
       document.execCommand('DefaultParagraphSeparator', false, 'p')
       window.addEventListener('keydown', this.deleteSelectNode, true)
+      // window.addEventListener('mousewheel', e => {
+      //   // TODO: イベントを関数にして removeEvent する
+      //   // エディタ以外のスクロールには関与しない
+      //   if (!e.path.find(dom => dom.className === 'content-editable-page') ){
+      //     return
+      //   }
+      //   const container = this.$refs.container.getBoundingClientRect()
+      //   const preview = this.$refs.preview.getBoundingClientRect()
+      //   if (container.x - 2 < preview.x && e.deltaX < 0) {
+      //     e.preventDefault()
+      //   }
+      // })
     },
     destroyed() {
       window.removeEventListener('keydown', this.deleteSelectNode, true)
@@ -333,15 +348,15 @@
 <style scoped>
   .content-editable-page {
     overflow: scroll;
-    width: 100%;
+    width: 400px;
     height: 500px;
+    margin: auto;
     position: relative;
     word-break: break-all;
     writing-mode: vertical-rl;
   }
   .editable {
     box-sizing: border-box;
-    width: 100%;
     position: absolute;
     z-index: 2;
     top: 0px;
@@ -352,15 +367,19 @@
   .preview {
     border-radius: 3px;
     box-sizing: border-box;
-    width: 100%;
     position: absolute;
     z-index: 3;
+    top: 0px;
     right: 28px;
     opacity: 1;
     padding: 1rem;
   }
   .editable, .preview {
     padding-left: 3rem;
+    /* TODO: ここを100% にしないと width が自動計算になって各種計算が小数点でずれる…
+       でも auto にしないと横スクロール時の戻るアクションキャンセル判定の計算が面倒くさい
+    */
+    width: 100%;
   }
 
   .caret {
