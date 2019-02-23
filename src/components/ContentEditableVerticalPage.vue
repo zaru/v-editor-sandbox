@@ -333,6 +333,7 @@
         sel.addRange(range)
       },
       disableSwipeBack (e) {
+        // TODO: firefox / safari だとうまくうごいていない
         // エディタ以外のスクロールには関与しない
         if (!e.path.find(dom => dom.className === 'content-editable-page') ){
           return
@@ -345,7 +346,7 @@
         }
       },
       hoge (e) {
-        // TODO: これなにがしたかったんだっけ…？
+        // TODO: 改行したときに適切に横スクロールをコントロールしたい
         if (!this.isComposing) {
           console.log('left')
           this.$refs.preview.scrollLeft = 10
