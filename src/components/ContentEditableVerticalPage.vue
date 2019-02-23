@@ -47,8 +47,12 @@
           "<p><br></p>" +
           "<p><br></p>" +
           "<p>The Logical Framework Approach (LFA) is a methodology mainly used for designing, monitoring, and evaluating international development projects.</p>" +
-          "<p>カリスト (Jupiter IV Callisto) は、<strong>木星の第4衛星である。</strong>ガニメデに次いで2番目に大きい木星の衛星であり、太陽系の衛星の中ではガニメデと土星最大の衛星タイタンに次ぐ3番目の大きさを持つ。</p>",
-        caret: {
+          "<p>カリスト (Jupiter IV Callisto) は、<strong>木星の第4衛星である。</strong>ガニメデに次いで2番目に大きい木星の衛星であり、太陽系の衛星の中ではガニメデと土星最大の衛星タイタンに次ぐ3番目の大きさを持つ。</p>" +
+          "<p><br></p>" +
+          "<p><br></p>" +
+          "<p>abc</p>" +
+          "<p>def</p>",
+          caret: {
           style: {
             display: 'none',
             width: '22px',
@@ -168,14 +172,30 @@
           const anchor = document.createElement('span')
           // MEMO: 先頭に空の span いれると座標がずれるため zero-width-space 入れる
           anchor.innerText = '&#8203;'
+          anchor.style.background = '#f00'
+          anchor.style.border = '1px solid #f00'
+          anchor.style.position = 'absolute'
           range.insertNode(anchor)
           const pos = anchor.getBoundingClientRect()
           anchor.parentElement.removeChild(anchor)
-          const parentPos = this.$refs.editable.getBoundingClientRect()
+          const parentPos = this.$refs.preview.getBoundingClientRect()
+          const anchorLeft = pos.left - parentPos.left
+          const viewerPos = this.$refs.container.getBoundingClientRect()
+          const parentOffsetLeft = parentPos.left + document.defaultView.pageXOffset
+          const parentLeft = viewerPos.left - parentOffsetLeft
+          // MEMO: 相対パスでの座標指定であってもすくローラブルな状態だと left:0 にしても左端に行くわけじゃないので
+          // はみでたエディタ右は自分を計算してマイナスで調整している
+          const parentRight = parentPos.width - parentLeft - viewerPos.width
           const offset = target.className === 'editable' ? 28 : 0
           this.caret.style.top = pos.top - parentPos.top + 'px'
-          this.caret.style.left = pos.left - offset - parentPos.left + 1 + 'px'
+          this.caret.style.left = anchorLeft - parentLeft - parentRight - 28 + 2 - offset + 'px'
         }
+      },
+      offset(el) {
+        const rect = el.getBoundingClientRect(),
+          scrollLeft = window.pageXOffset || document.documentElement.scrollLeft,
+          scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        return { top: rect.top + scrollTop, left: rect.left + scrollLeft }
       },
       getActiveRange (range, target) {
         // MEMO: 自身の textnode が親から見て何番目のインデックスなのかを知る
@@ -315,10 +335,23 @@
         sel.removeAllRanges()
         sel.addRange(range)
       },
+      disableSwipeBack (e) {
+        // エディタ以外のスクロールには関与しない
+        if (!e.path.find(dom => dom.className === 'content-editable-page') ){
+          return
+        }
+        const container = this.$refs.container.getBoundingClientRect()
+        const preview = this.$refs.preview.getBoundingClientRect()
+        // console.log(container.x, preview.x)
+        if (container.x - 2 < preview.x && e.deltaX < 0) {
+          e.preventDefault()
+        }
+      },
       hoge (e) {
         // TODO: これなにがしたかったんだっけ…？
         if (!this.isComposing) {
-          console.log('Class: , Function: , Line 318 e: ', e)
+          console.log('left')
+          this.$refs.preview.scrollLeft = 10
         }
       }
     },
@@ -326,21 +359,11 @@
       this.innerContent = this.content
       document.execCommand('DefaultParagraphSeparator', false, 'p')
       window.addEventListener('keydown', this.deleteSelectNode, true)
-      // window.addEventListener('mousewheel', e => {
-      //   // TODO: イベントを関数にして removeEvent する
-      //   // エディタ以外のスクロールには関与しない
-      //   if (!e.path.find(dom => dom.className === 'content-editable-page') ){
-      //     return
-      //   }
-      //   const container = this.$refs.container.getBoundingClientRect()
-      //   const preview = this.$refs.preview.getBoundingClientRect()
-      //   if (container.x - 2 < preview.x && e.deltaX < 0) {
-      //     e.preventDefault()
-      //   }
-      // })
+      window.addEventListener('mousewheel', this.disableSwipeBack)
     },
     destroyed() {
       window.removeEventListener('keydown', this.deleteSelectNode, true)
+      window.removeEventListener('mousewheel', this.disableSwipeBack)
     }
   })
 </script>
@@ -375,11 +398,11 @@
     padding: 1rem;
   }
   .editable, .preview {
-    padding-left: 3rem;
+    /*padding-left: 3rem;*/
     /* TODO: ここを100% にしないと width が自動計算になって各種計算が小数点でずれる…
        でも auto にしないと横スクロール時の戻るアクションキャンセル判定の計算が面倒くさい
     */
-    width: 100%;
+    /*width: 100%;*/
   }
 
   .caret {
