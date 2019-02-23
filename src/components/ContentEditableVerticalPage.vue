@@ -172,9 +172,6 @@
           const anchor = document.createElement('span')
           // MEMO: 先頭に空の span いれると座標がずれるため zero-width-space 入れる
           anchor.innerText = '&#8203;'
-          anchor.style.background = '#f00'
-          anchor.style.border = '1px solid #f00'
-          anchor.style.position = 'absolute'
           range.insertNode(anchor)
           const pos = anchor.getBoundingClientRect()
           anchor.parentElement.removeChild(anchor)
