@@ -18,6 +18,7 @@
     ></div>
 
     <div class="preview"
+         :contenteditable="getPreviewEditable"
          v-html="contentHtml"
          ref="preview"
          @mouseup="selected"
@@ -25,6 +26,11 @@
 
     <div class="caret" :style="caretStyle">
       <svg><rect x="0" y="0" width="100%" height="1"></rect></svg>
+    </div>
+
+    <div class="highlight-menu">
+      <button @click="toBold">B</button>
+      <button>T</button>
     </div>
     <!--<div contenteditable="true" style="{position: absolute; top: 500px;}">abced</div>-->
   </div>
@@ -67,10 +73,14 @@
           }
         },
         compositing: false,
-        selecting: false
+        selecting: false,
+        previewEditable: false
       }
     },
     computed: {
+      getPreviewEditable () {
+        return this.previewEditable ? 'true' : 'false'
+      },
       editContent: {
         get () {
           // MEMO: 識別用の data-key を付与する
@@ -264,8 +274,10 @@
         // 範囲選択ではない場合はフォーカスさせる
         if (range.startOffset === range.endOffset) {
           this.focusAndMoveCaret(e, range)
+          this.previewEditable = false
         } else {
           this.selecting = true
+          this.previewEditable = true
         }
       },
       pasteText (e) {
@@ -351,6 +363,24 @@
         if (!this.isComposing) {
           this.$refs.container.scrollLeft -= 30
         }
+      },
+      toBold () {
+        // TODO: やはり node またぎの修正がつらい
+        // const sel = window.getSelection()
+        // const range = sel.getRangeAt(0)
+        // console.log(range.commonAncestorContainer.parentElement.innerHTML)
+        // let html = range.commonAncestorContainer.parentElement.innerHTML
+        // html = html.slice(0, range.startOffset) + '<strong>' + html.slice(range.startOffset)
+        // html = html.slice(0, range.endOffset + 8) + '</strong>' + html.slice(range.endOffset + 8)
+        // range.commonAncestorContainer.parentElement.innerHTML = html
+        // this.$refs.editable.innerHTML = this.$refs.preview.innerHTML
+        // console.log(range)
+        
+        // MEMO: preview 自体を一時的に contenteditable にして execCommand が効くようにして再代入している
+        document.execCommand('bold')
+        this.$refs.editable.innerHTML = this.$refs.preview.innerHTML
+        this.previewEditable = false
+
       }
     },
     mounted() {
@@ -421,6 +451,25 @@
   @keyframes blinkAnimation {
     0% { opacity: 0 }
     100% { opacity: 1 }
+  }
+
+  .highlight-menu {
+    position: absolute;
+    z-index: 10;
+    top: 0;
+    right: 30px;
+    background-color: #000;
+    color: #fff;
+    display: inline-block;
+  }
+  .highlight-menu button{
+    width: 32px;
+    height: 32px;
+    display: block;
+    background-color: transparent;
+    color: #fff;
+    font-weight: bold;
+    border: 0;
   }
 
 </style>
