@@ -32,6 +32,7 @@
 
 <script>
   import browser from 'browser-detect'
+  import 'intersection-observer'
   import Vue from 'vue'
   const ua = browser()
 
@@ -66,7 +67,9 @@
           }
         },
         compositing: false,
-        selecting: false
+        selecting: false,
+        observer: null,
+        intersectionObserver: null
       }
     },
     computed: {
@@ -348,9 +351,29 @@
       hoge (e) {
         // TODO: 改行したときに適切に横スクロールをコントロールしたい
         if (!this.isComposing) {
-          console.log('left')
-          this.$refs.preview.scrollLeft = 10
+          this.$refs.container.scrollLeft -= 30
+          // console.log('left', e)
+          // const sel = window.getSelection()
+          // const range = sel.getRangeAt(0)
+          // if (range.commonAncestorContainer.offsetLeft < 50) {
+          //   this.$refs.container.scrollLeft = 0
+          // }
+          // console.log('Class: , Function: , Line 354 : ', range)
         }
+      },
+      callback (entries, observer) {
+        const sel = window.getSelection()
+        let key = ''
+        if (sel.anchorNode) {
+          key = sel.anchorNode.parentNode.dataset.key
+        }
+        entries.forEach(entry => {
+          if (key === entry.target.dataset.key) {
+            if (!entry.isIntersecting) {
+              this.$refs.container.scrollLeft = 0
+            }
+          }
+        })
       }
     },
     mounted() {
@@ -358,10 +381,34 @@
       document.execCommand('DefaultParagraphSeparator', false, 'p')
       window.addEventListener('keydown', this.deleteSelectNode, true)
       window.addEventListener('mousewheel', this.disableSwipeBack)
+
+      // TODO: mutation と intersection で横スクロールを制御しようと思ったけど難しい
+      // const options = {
+      //   attributes: true, childList: true, characterData: true
+      // }
+      //
+      // this.observer = new MutationObserver((mutations) => {
+      //   mutations.forEach((mutation) => {
+      //     console.log(mutation)
+      //     mutation.addedNodes.forEach(node => {
+      //       console.log('Class: , Function: , Line 381 node: ', node)
+      //       this.intersectionObserver.observe(node)
+      //     })
+      //   })
+      // })
+      // this.observer.observe(this.$refs.editable, options)
+      //
+      // const intersectionOptions = {
+      //   root: this.$refs.container,
+      //   rootMargin: '0px',
+      //   threshold: 1
+      // }
+      // this.intersectionObserver = new IntersectionObserver(this.callback, intersectionOptions)
     },
     destroyed() {
       window.removeEventListener('keydown', this.deleteSelectNode, true)
       window.removeEventListener('mousewheel', this.disableSwipeBack)
+      this.observer.disconnect()
     }
   })
 </script>
