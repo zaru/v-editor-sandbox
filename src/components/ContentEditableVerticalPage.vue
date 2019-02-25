@@ -46,19 +46,15 @@
     name: 'ContentEditableVerticalPage',
     components: {
     },
+    props: {
+      content: {
+        type: String
+      }
+    },
     data () {
       return {
         innerContent: '',
-        content: "<p>今日は暖かいという噂だったけど、そんなことはなかった。</p>" +
-          "<h3>小見出しです</h3>" +
-          "<p><br></p>" +
-          "<p><br></p>" +
-          "<p>The Logical Framework Approach (LFA) is a methodology mainly used for designing, monitoring, and evaluating international development projects.</p>" +
-          "<p>カリスト (Jupiter IV Callisto) は、<strong>木星の第4衛星である。</strong>ガニメデに次いで2番目に大きい木星の衛星であり、太陽系の衛星の中ではガニメデと土星最大の衛星タイタンに次ぐ3番目の大きさを持つ。</p>" +
-          "<p><br></p>" +
-          "<p><br></p>" +
-          "<p>abc</p>" +
-          "<p>def</p>",
+        previewContent: '',
           caret: {
           style: {
             display: 'none',
@@ -106,7 +102,7 @@
       contentHtml () {
         // MEMO: 識別用の data-key を付与する
         const div = document.createElement('div')
-        div.innerHTML = this.content
+        div.innerHTML = this.previewContent
         div.childNodes.forEach((node, index) => {
           if (node.dataset) {
             node.dataset.key = index
@@ -141,9 +137,15 @@
         // const cleanHTML = [...e.target.childNodes].map(e => {
         const cleanHTML = [...nodes].map(e => {
           e.removeAttribute('data-key')
+          ;[...e.childNodes].map(e => {
+            if (e.nodeType === 1) {
+              e.removeAttribute('data-key')
+            }
+          })
           return e.outerHTML
         }).join('')
-        this.content = cleanHTML
+        this.previewContent = cleanHTML
+        this.$emit('updated', cleanHTML)
       },
       editorKeyUp (e) {
         this.moveCaret(e.target)
@@ -231,9 +233,6 @@
             joinNode += node.nodeValue
           }
         })
-        // const mergedNode = [...e.childNodes].map(node => node.nodeValue).join('')
-        // MEMO: 空白の改行の場合、<br> だけなので nodeValue でテキストにすると削除されてしまうので入れ直す
-        // e.innerHTML = mergedNode ? mergedNode : '<br>'
         e.innerHTML = joinNode
       },
       activeFocus (node, offset) {
@@ -338,7 +337,6 @@
         document.activeElement.blur()
         const range = document.createRange()
         const sel = window.getSelection()
-        // range.selectNodeContents(this.$refs.preview)
         range.setStart(this.$refs.preview.childNodes[0], 0)
         const endNode = this.$refs.preview.childNodes[this.$refs.preview.childNodes.length - 1]
         range.setEnd(endNode, endNode.childNodes.length)
@@ -353,7 +351,6 @@
         }
         const container = this.$refs.container.getBoundingClientRect()
         const preview = this.$refs.preview.getBoundingClientRect()
-        // console.log(container.x, preview.x)
         if (container.x - 2 < preview.x && e.deltaX < 0) {
           e.preventDefault()
         }
@@ -365,25 +362,15 @@
         }
       },
       toBold () {
-        // TODO: やはり node またぎの修正がつらい
-        // const sel = window.getSelection()
-        // const range = sel.getRangeAt(0)
-        // console.log(range.commonAncestorContainer.parentElement.innerHTML)
-        // let html = range.commonAncestorContainer.parentElement.innerHTML
-        // html = html.slice(0, range.startOffset) + '<strong>' + html.slice(range.startOffset)
-        // html = html.slice(0, range.endOffset + 8) + '</strong>' + html.slice(range.endOffset + 8)
-        // range.commonAncestorContainer.parentElement.innerHTML = html
-        // this.$refs.editable.innerHTML = this.$refs.preview.innerHTML
-        // console.log(range)
-        
         // MEMO: preview 自体を一時的に contenteditable にして execCommand が効くようにして再代入している
         document.execCommand('bold')
         this.$refs.editable.innerHTML = this.$refs.preview.innerHTML
+        this.sync()
         this.previewEditable = false
-
       }
     },
     mounted() {
+      this.previewContent = this.content
       this.innerContent = this.content
       document.execCommand('DefaultParagraphSeparator', false, 'p')
       window.addEventListener('keydown', this.deleteSelectNode, true)
