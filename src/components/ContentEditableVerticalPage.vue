@@ -31,7 +31,7 @@
 
       <!--<div contenteditable="true" style="{position: absolute; top: 500px;}">abced</div>-->
     </div>
-    <div class="highlight-menu">
+    <div class="highlight-menu" :style="highlightMenuStyle">
       <button @click="toBold">B</button>
       <button @click="toHead">T</button>
     </div>
@@ -68,6 +68,13 @@
         container: {
           style: {
             boxShadow: 'none'
+          }
+        },
+        highlightMenu: {
+          style: {
+            top: '0px',
+            left: '0px',
+            display: 'none'
           }
         },
         compositing: false,
@@ -128,6 +135,13 @@
       containerStyle () {
         return {
           boxShadow: this.container.style.boxShadow
+        }
+      },
+      highlightMenuStyle () {
+        return {
+          top: this.highlightMenu.style.top,
+          left: this.highlightMenu.style.left,
+          display: this.highlightMenu.style.display
         }
       }
     },
@@ -279,6 +293,17 @@
         } else {
           this.selecting = true
           this.previewEditable = true
+
+          // MEMO: 選択した位置の textnode 座標を算出
+          // メニューの表示位置に利用している
+          const anchor = document.createElement('span')
+          anchor.innerText = '&#8203;'
+          range.insertNode(anchor)
+          const pos = anchor.getBoundingClientRect()
+          anchor.parentElement.removeChild(anchor)
+          this.highlightMenu.style.display = 'block'
+          this.highlightMenu.style.top = `${pos.y}px`
+          this.highlightMenu.style.left = `${pos.x + 30}px`
         }
       },
       pasteText (e) {
@@ -381,6 +406,18 @@
         this.$refs.editable.innerHTML = this.$refs.preview.innerHTML
         this.sync()
         this.previewEditable = false
+      },
+      selectChange () {
+        const sel = window.getSelection()
+        // MEMO: 解除はここでやる、メニュー出現は preview 自身を select したときのみなので
+        if (sel.rangeCount === 0) {
+          this.highlightMenu.style.display = 'none'
+          // TODO: 分割された textnode をぜんぶマージ、パフォーマンス悪そう
+          // 本当は選択した位置の textnode だけをマージしたい。どこかにメモする？
+          ;[...this.$refs.preview.childNodes].map(e => {
+            this.mergeTextNode(e)
+          })
+        }
       }
     },
     mounted() {
@@ -389,10 +426,12 @@
       document.execCommand('DefaultParagraphSeparator', false, 'p')
       window.addEventListener('keydown', this.deleteSelectNode, true)
       window.addEventListener('mousewheel', this.disableSwipeBack)
+      document.addEventListener('selectionchange', this.selectChange)
     },
     destroyed() {
       window.removeEventListener('keydown', this.deleteSelectNode, true)
       window.removeEventListener('mousewheel', this.disableSwipeBack)
+      document.removeEventListener('selectionchange', this.selectChange)
     }
   })
 </script>
@@ -456,15 +495,13 @@
   }
 
   .editor {
-    position: relative;
   }
   .highlight-menu {
     position: absolute;
     z-index: 10;
-    top: 0px;
-    right: 0px;
     background-color: #000;
     color: #fff;
+    border-radius: 3px;
     display: inline-block;
   }
   .highlight-menu button{
