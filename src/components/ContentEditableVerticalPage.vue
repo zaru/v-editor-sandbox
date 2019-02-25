@@ -1,38 +1,40 @@
 <template>
-  <div class="content-editable-page"
-       ref="container"
-       :style="containerStyle"
-  >
-    <div contenteditable="true" class="editable"
-         v-html="editContent"
-         ref="editable"
-         @compositionstart="compositionstart"
-         @compositionend="compositionend"
-         @input="sync"
-         @keyup.exact="editorKeyUp"
-         @keyup.enter="scrollLeft"
-         @keydown.meta.65="selectAll"
-         @paste.prevent="pasteText"
-         @focus="focus"
-         @blur="focusOut"
-    ></div>
+  <div class="editor">
+    <div class="content-editable-page"
+         ref="container"
+         :style="containerStyle"
+    >
+      <div contenteditable="true" class="editable"
+           v-html="editContent"
+           ref="editable"
+           @compositionstart="compositionstart"
+           @compositionend="compositionend"
+           @input="sync"
+           @keyup.exact="editorKeyUp"
+           @keyup.enter="scrollLeft"
+           @keydown.meta.65="selectAll"
+           @paste.prevent="pasteText"
+           @focus="focus"
+           @blur="focusOut"
+      ></div>
 
-    <div class="preview"
-         :contenteditable="getPreviewEditable"
-         v-html="contentHtml"
-         ref="preview"
-         @mouseup="selected"
-    ></div>
+      <div class="preview"
+           :contenteditable="getPreviewEditable"
+           v-html="contentHtml"
+           ref="preview"
+           @mouseup="selected"
+      ></div>
 
-    <div class="caret" :style="caretStyle">
-      <svg><rect x="0" y="0" width="100%" height="1"></rect></svg>
+      <div class="caret" :style="caretStyle">
+        <svg><rect x="0" y="0" width="100%" height="1"></rect></svg>
+      </div>
+
+      <!--<div contenteditable="true" style="{position: absolute; top: 500px;}">abced</div>-->
     </div>
-
     <div class="highlight-menu">
       <button @click="toBold">B</button>
-      <button>T</button>
+      <button @click="toHead">T</button>
     </div>
-    <!--<div contenteditable="true" style="{position: absolute; top: 500px;}">abced</div>-->
   </div>
 </template>
 
@@ -367,6 +369,18 @@
         this.$refs.editable.innerHTML = this.$refs.preview.innerHTML
         this.sync()
         this.previewEditable = false
+      },
+      toHead () {
+        // MEMO: preview 自体を一時的に contenteditable にして execCommand が効くようにして再代入している
+        const sel = window.getSelection()
+        if (sel.anchorNode.parentNode.localName === 'h3') {
+          document.execCommand('formatBlock', false, '<p>')
+        } else {
+          document.execCommand('formatBlock', false, '<h3>')
+        }
+        this.$refs.editable.innerHTML = this.$refs.preview.innerHTML
+        this.sync()
+        this.previewEditable = false
       }
     },
     mounted() {
@@ -385,6 +399,7 @@
 
 <style scoped>
   .content-editable-page {
+    border: 1px solid #f0f0f0;
     overflow: scroll;
     width: 400px;
     height: 500px;
@@ -440,11 +455,14 @@
     100% { opacity: 1 }
   }
 
+  .editor {
+    position: relative;
+  }
   .highlight-menu {
     position: absolute;
     z-index: 10;
-    top: 0;
-    right: 30px;
+    top: 0px;
+    right: 0px;
     background-color: #000;
     color: #fff;
     display: inline-block;
