@@ -27,7 +27,6 @@
     },
     methods: {
       updatedData (data) {
-        console.log('Class: , Function: , Line 30 data: ', data)
       }
     }
   })

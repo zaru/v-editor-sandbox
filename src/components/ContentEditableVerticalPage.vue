@@ -25,7 +25,7 @@
            @mouseup="selected"
       ></div>
 
-      <div class="caret" :style="caretStyle">
+      <div class="caret" ref="caret" :style="caretStyle">
         <svg><rect x="0" y="0" width="100%" height="1"></rect></svg>
       </div>
 
@@ -385,7 +385,11 @@
       scrollLeft () {
         // MEMO: 改行したときに少しだけ横スクロールしてテキストが隠れないようにする
         if (!this.isComposing) {
-          this.$refs.container.scrollLeft -= 30
+          const cursorRect = this.$refs.caret.getBoundingClientRect()
+          const containerRect = this.$refs.container.getBoundingClientRect()
+          if (cursorRect.x - containerRect.x < containerRect.width / 2) {
+            this.$refs.container.scrollLeft -= 30
+          }
         }
       },
       toBold () {
