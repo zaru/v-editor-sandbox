@@ -22,7 +22,7 @@
            :contenteditable="getPreviewEditable"
            v-html="contentHtml"
            ref="preview"
-           @mouseup="selected"
+           @click="selected"
       ></div>
 
       <div class="caret" ref="caret" :style="caretStyle">
@@ -164,7 +164,7 @@
         this.$emit('updated', cleanHTML)
       },
       editorKeyUp (e) {
-        this.moveCaret(e.target)
+        this.moveCaret(e.target, null, e, 'keyup')
       },
       focusAndMoveCaret (e, range) {
         // テキスト以外のエディタ部分をクリックした場合は、フォーカスを末尾へ
@@ -172,14 +172,15 @@
           const p = this.$refs.editable.childNodes[this.$refs.editable.childNodes.length - 1]
           const t = p.childNodes[p.childNodes.length - 1]
           this.activeFocus(t, t.length)
-          this.moveCaret(this.$refs.editable)
+          this.moveCaret(this.$refs.editable, null, e)
         } else {
-          this.moveCaret(e.target)
+          this.moveCaret(e.target, null, e)
           // クリックした位置の range を前もって抜き出しておく
           // mergeTextNode で内包 node を書き換えてしまうと range 情報が失われてしまうので
           if (!range) {
-            const previewSel = window.getSelection()
-            range = previewSel.getRangeAt(0)
+            // const previewSel = window.getSelection()
+            // range = previewSel.getRangeAt(0)
+            range = document.caretRangeFromPoint(e.clientX, e.clientY)
           }
           const activeRange = this.getActiveRange(range, e.target)
           this.mergeTextNode(e.target)
@@ -188,10 +189,16 @@
           this.focusEditor(activeRange)
         }
       },
-      moveCaret (target, range) {
+      moveCaret (target, range, e, mode) {
         if (!range) {
           const sel = window.getSelection()
-          range = sel.getRangeAt(0)
+          // TODO: ここで keyup 分岐をしている箇所をリファクタリングする
+          // 具体的には Range オブジェクトを返す関数を定義して差分を吸収させる
+          if (mode === 'keyup' || ua.name === 'firefox') {
+            range = sel.getRangeAt(0)
+          } else {
+            range = document.caretRangeFromPoint(e.clientX, e.clientY)
+          }
         }
         // MEMO: safari で日本語変換中に node をいじると二重でテキストが入ってしまうため変換中は caret 移動させない
         if (ua.name === 'safari' && this.compositing) {
@@ -203,17 +210,20 @@
           anchor.innerText = '&#8203;'
           range.insertNode(anchor)
           const pos = anchor.getBoundingClientRect()
+          console.log('pos.top', pos.top)
           anchor.parentElement.removeChild(anchor)
           const parentPos = this.$refs.preview.getBoundingClientRect()
+          console.log(this.$refs.preview.getBoundingClientRect())
           const anchorLeft = pos.left - parentPos.left
           const viewerPos = this.$refs.container.getBoundingClientRect()
           const parentOffsetLeft = parentPos.left + document.defaultView.pageXOffset
           const parentLeft = viewerPos.left - parentOffsetLeft
+          console.log('Class: , Function: , Line 214 ', pos.top, parentPos.top, this.caret.style.top)
           // MEMO: 相対パスでの座標指定であってもすくローラブルな状態だと left:0 にしても左端に行くわけじゃないので
           // はみでたエディタ右は自分を計算してマイナスで調整している
           const parentRight = parentPos.width - parentLeft - viewerPos.width
           const offset = target.className === 'editable' ? 28 : 0
-          this.caret.style.top = pos.top - parentPos.top + 'px'
+          this.caret.style.top = `${pos.top - parentPos.top}px`
           this.caret.style.left = anchorLeft - parentLeft - parentRight - 28 + 2 - offset + 'px'
         }
       },
@@ -284,8 +294,13 @@
         this.caret.style.display = 'none'
       },
       selected (e) {
-        const sel = window.getSelection()
-        const range = sel.getRangeAt(0)
+        let range
+        if (ua.name === 'firefox') {
+          range = document.createRange()
+          range.setStart(e.rangeParent, e.rangeOffset)
+        } else {
+          range = document.caretRangeFromPoint(e.clientX, e.clientY)
+        }
         // 範囲選択ではない場合はフォーカスさせる
         if (range.startOffset === range.endOffset) {
           this.focusAndMoveCaret(e, range)
@@ -336,7 +351,7 @@
           const acrossNode = range.startContainer !== range.endContainer
           const target = range.startContainer.parentNode
           sel.deleteFromDocument()
-          this.moveCaret(this.$refs.preview, range)
+          this.moveCaret(this.$refs.preview, range, e)
 
           const activeRange = this.getActiveRange(range, target)
           // MEMO: node またぎのときには先頭 node の末尾にキャレットを移動させる
@@ -457,7 +472,7 @@
     z-index: 2;
     top: 0px;
     padding: 1rem;
-    /*caret-color: transparent;*/
+    caret-color: transparent;
     opacity: 0;
   }
   .preview {
