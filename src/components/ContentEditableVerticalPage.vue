@@ -210,15 +210,12 @@
           anchor.innerText = '&#8203;'
           range.insertNode(anchor)
           const pos = anchor.getBoundingClientRect()
-          console.log('pos.top', pos.top)
           anchor.parentElement.removeChild(anchor)
           const parentPos = this.$refs.preview.getBoundingClientRect()
-          console.log(this.$refs.preview.getBoundingClientRect())
           const anchorLeft = pos.left - parentPos.left
           const viewerPos = this.$refs.container.getBoundingClientRect()
           const parentOffsetLeft = parentPos.left + document.defaultView.pageXOffset
           const parentLeft = viewerPos.left - parentOffsetLeft
-          console.log('Class: , Function: , Line 214 ', pos.top, parentPos.top, this.caret.style.top)
           // MEMO: 相対パスでの座標指定であってもすくローラブルな状態だと left:0 にしても左端に行くわけじゃないので
           // はみでたエディタ右は自分を計算してマイナスで調整している
           const parentRight = parentPos.width - parentLeft - viewerPos.width
@@ -294,15 +291,28 @@
         this.caret.style.display = 'none'
       },
       selected (e) {
+        // TODO: 文字列選択後、別の箇所をクリックすると textnode が分割されているため
+        // ここで textnode 結合をしているが…クリックした時点でおそらく  window.getSelection() は決まってる
+        // 謎
+        if (this.selecting) {
+          ;[...this.$refs.preview.childNodes].map(e => {
+            this.mergeTextNode(e)
+          })
+        }
         let range
         if (ua.name === 'firefox') {
           range = document.createRange()
           range.setStart(e.rangeParent, e.rangeOffset)
-        } else {
+        } else if (ua.mobile && ua.os === 'OS X') {
           range = document.caretRangeFromPoint(e.clientX, e.clientY)
+        } else {
+          const sel = window.getSelection()
+          range = sel.getRangeAt(0)
         }
         // 範囲選択ではない場合はフォーカスさせる
         if (range.startOffset === range.endOffset) {
+          // MEMO: 選択中にクリックした場合は textnode が分割されているためマージさせる
+
           this.focusAndMoveCaret(e, range)
           this.previewEditable = false
         } else {
